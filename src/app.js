@@ -2,35 +2,33 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const swaggerUi = require('swagger-ui-dist'); // Ganti ke swagger-ui-dist
+const path = require('path');
 const swaggerJsDoc = require('swagger-jsdoc');
 
 // Import Routes
 const authRoutes = require('./routes/auth.routes');
 const notesRoutes = require('./routes/notes.routes');
 
-// Load Environment Variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- MIDDLEWARES ---
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// --- SWAGGER CONFIGURATION (FIXED FOR VERCEL) ---
+// Serve Static Files (untuk swagger.html)
+app.use(express.static(path.join(__dirname, '../public')));
+
+// --- SWAGGER CONFIGURATION ---
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'AI Notes API Documentation',
       version: '1.0.0',
-      description: 'API Dokumentasi untuk Aplikasi AI Notes Generator dengan Fitur Summary, Quiz, dan Flashcard.',
-      contact: {
-        name: 'Masalif',
-        email: 'masalif@example.com',
-      },
+      description: 'API Dokumentasi untuk Aplikasi AI Notes Generator.',
     },
     servers: [
       {
@@ -57,30 +55,27 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/routes/*.js'], 
+  apis: ['./src/routes/*.js'],
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
-// Serve Swagger UI Static Assets
-app.use('/api-docs', express.static(swaggerUi.getAbsoluteFSPath()));
-
-// Serve index.html for Swagger UI
+// Endpoint untuk melayani file HTML Swagger
 app.get('/api-docs', (req, res) => {
-  res.sendFile(swaggerUi.getAbsoluteFSPath() + '/index.html');
+  res.sendFile(path.join(__dirname, '../public/swagger.html'));
 });
 
-// Serve swagger.json definition
+// Endpoint untuk melayani definisi JSON Swagger
 app.get('/api-docs/swagger.json', (req, res) => {
   res.json(swaggerDocs);
 });
 // ---------------------------------
 
-// --- ROUTES ---
+// Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/notes', notesRoutes);
 
-// Health Check Root & Global
+// Health Check
 app.get('/', (req, res) => {
   res.send('AI Notes API is running... Visit /api-docs for documentation');
 });
@@ -93,9 +88,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// --- ERROR HANDLING ---
-
-// Handle 404 Not Found
+// Error Handling
 app.use((req, res) => {
   res.status(404).json({ 
     success: false, 
@@ -103,7 +96,6 @@ app.use((req, res) => {
   });
 });
 
-// Global Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
@@ -112,11 +104,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// --- START SERVER ---
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📄 Swagger Docs available at http://localhost:${PORT}/api-docs`);
   });
 }
 

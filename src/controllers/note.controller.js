@@ -6,12 +6,17 @@ const { successResponse, errorResponse } = require('../utils/apiResponse');
 const { generateQuizFromText } = require('../services/quiz.service');
 const { generateFlashcardsFromText } = require('../services/flashcard.service'); 
 const prisma = require('../config/db');
+const fs = require('fs');
+const path = require('path');
+const axios = require('axios');
 
 /**
  * @desc    Upload file catatan & Ekstrak Teks & Generate Summary
  * @route   POST /api/v1/notes/upload
  * @access  Private
  */
+// src/controllers/note.controller.js
+ // Pastikan sudah install axios
 const uploadNote = async (req, res) => {
   try {
     if (!req.file) {
@@ -21,22 +26,41 @@ const uploadNote = async (req, res) => {
     const { userId } = req.user;
     const { title } = req.body;
     
-    const fileName = req.file.filename;
-    const filePath = req.file.path;
+    const fileName = req.file.originalname;
+    const fileUrl = req.file.path; // URL dari Cloudinary
 
     console.log(`[UPLOAD] Menerima file: ${fileName}`);
+    console.log(`[UPLOAD] URL Cloudinary: ${fileUrl}`);
 
-    // 1. Simpan metadata dasar dulu
-    let note = await saveNoteMetadata(userId, title, fileName, filePath);
+    // 1. Download file sementara dari Cloudinary ke /tmp (Vercel Temp Dir)
+    const tempDir = '/tmp';
+    const tempFilePath = path.join(tempDir, fileName);
+    
+    const response = await axios({
+      url: fileUrl,
+      method: 'GET',
+      responseType: 'stream'
+    });
 
-    // 2. Ekstrak teks dari file
+    const writer = fs.createWriteStream(tempFilePath);
+    response.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+
+    console.log('[UPLOAD] File didownload sementara ke:', tempFilePath);
+
+    // 2. Simpan metadata ke DB (Simpan URL Cloudinary, bukan path lokal)
+    let note = await saveNoteMetadata(userId, title, fileName, fileUrl);
+
+    // 3. Ekstrak Teks
     let extractedText = "";
     try {
       console.log('[EXTRACT] Mulai ekstraksi teks...');
-      extractedText = await extractTextFromFile(filePath);
-      console.log(`[EXTRACT] Berhasil mengekstrak ${extractedText.length} karakter.`);
+      extractedText = await extractTextFromFile(tempFilePath);
       
-      // Update database dengan content
       if (extractedText) {
         note = await prisma.note.update({
           where: { id: note.id },
@@ -45,16 +69,19 @@ const uploadNote = async (req, res) => {
       }
     } catch (extractError) {
       console.error('[EXTRACT ERROR]', extractError.message);
+    } finally {
+      // Hapus file sementara agar tidak memenuhi memori
+      if (fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
     }
 
-    // 3. Generate Summary dengan AI (hanya jika ada teks)
+    // 4. Generate Summary (Sama seperti sebelumnya)
     if (extractedText && extractedText.length > 50) {
       try {
         console.log('[AI] Mulai generate summary...');
         const summary = await generateSummary(extractedText);
-        console.log('[AI] Summary berhasil dibuat.');
-
-        // Update database dengan summary
+        
         note = await prisma.note.update({
           where: { id: note.id },
           data: { summary: summary }
@@ -62,11 +89,9 @@ const uploadNote = async (req, res) => {
       } catch (aiError) {
         console.error('[AI ERROR]', aiError.message);
       }
-    } else {
-      console.log('[AI] Dilewati karena teks terlalu pendek atau kosong.');
     }
 
-    return successResponse(res, 201, 'File berhasil diupload, diekstrak, dan diringkas', note);
+    return successResponse(res, 201, 'File berhasil diupload & diproses', note);
 
   } catch (error) {
     console.error(error);

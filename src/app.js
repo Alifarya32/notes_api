@@ -2,7 +2,6 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const path = require('path');
 const swaggerJsDoc = require('swagger-jsdoc');
 
 // Import Routes
@@ -18,9 +17,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve Static Files (untuk swagger.html)
-app.use(express.static(path.join(__dirname, '../public')));
-
 // --- SWAGGER CONFIGURATION ---
 const swaggerOptions = {
   definition: {
@@ -32,7 +28,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'https://notes-api-ten-beta.vercel.app', // Ganti dengan URL Vercel Anda
+        url: 'https://notes-api-git-main-alifarya32s-projects.vercel.app/', // GANTI DENGAN URL VERCEL ANDA YANG BARU INI
         description: 'Production Server',
       },
       {
@@ -60,12 +56,46 @@ const swaggerOptions = {
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
-// Endpoint untuk melayani file HTML Swagger
+// Endpoint HTML Swagger (Langsung return string HTML)
 app.get('/api-docs', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/swagger.html'));
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>AI Notes API Docs</title>
+      <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
+      <style> body { margin: 0; padding: 0; } </style>
+    </head>
+    <body>
+      <div id="swagger-ui"></div>
+      <script src="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui-bundle.js"></script>
+      <script src="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui-standalone-preset.js"></script>
+      <script>
+        window.onload = function() {
+          const ui = SwaggerUIBundle({
+            url: "/api-docs/swagger.json",
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+              SwaggerUIBundle.presets.apis,
+              SwaggerUIStandalonePreset
+            ],
+            plugins: [
+              SwaggerUIBundle.plugins.DownloadUrl
+            ],
+            layout: "StandaloneLayout"
+          });
+          window.ui = ui;
+        };
+      </script>
+    </body>
+    </html>
+  `;
+  res.send(html);
 });
 
-// Endpoint untuk melayani definisi JSON Swagger
+// Endpoint JSON Definition
 app.get('/api-docs/swagger.json', (req, res) => {
   res.json(swaggerDocs);
 });

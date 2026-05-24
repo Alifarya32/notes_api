@@ -2,7 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const swaggerUi = require('swagger-ui-express');
+const swaggerUi = require('swagger-ui-dist'); // Ganti ke swagger-ui-dist
 const swaggerJsDoc = require('swagger-jsdoc');
 
 // Import Routes
@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// --- SWAGGER CONFIGURATION ---
+// --- SWAGGER CONFIGURATION (FIXED FOR VERCEL) ---
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -33,6 +33,10 @@ const swaggerOptions = {
       },
     },
     servers: [
+      {
+        url: 'https://notes-api-ten-beta.vercel.app', // Ganti dengan URL Vercel Anda
+        description: 'Production Server',
+      },
       {
         url: `http://localhost:${PORT}`,
         description: 'Development Server',
@@ -53,11 +57,23 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/routes/*.js'], // Path ke file routes yang berisi anotasi Swagger
+  apis: ['./src/routes/*.js'], 
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Serve Swagger UI Static Assets
+app.use('/api-docs', express.static(swaggerUi.getAbsoluteFSPath()));
+
+// Serve index.html for Swagger UI
+app.get('/api-docs', (req, res) => {
+  res.sendFile(swaggerUi.getAbsoluteFSPath() + '/index.html');
+});
+
+// Serve swagger.json definition
+app.get('/api-docs/swagger.json', (req, res) => {
+  res.json(swaggerDocs);
+});
 // ---------------------------------
 
 // --- ROUTES ---
@@ -87,7 +103,7 @@ app.use((req, res) => {
   });
 });
 
-// Global Error Handler (untuk catch error tak terduga)
+// Global Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({

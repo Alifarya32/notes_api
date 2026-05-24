@@ -1,0 +1,60 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notes     Note[]
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  summary     String?
+  fileName    String
+  filePath    String
+  userId      String
+  
+  user        User     @relation(fields: [userId], references: [id])
+  quizzes     Quiz[]   
+  flashcards  Flashcard[] // Relasi baru ke Flashcard
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Model Baru: Quiz
+model Quiz {
+  id          String   @id @default(uuid())
+  noteId      String   // Foreign Key ke Note
+  questions   Json     // Menyimpan array soal dalam format JSON
+  score       Int?     // Skor user (opsional, untuk fitur nanti)
+  createdAt   DateTime @default(now())
+  
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+
+// Model Baru: Flashcard
+model Flashcard {
+  id          String   @id @default(uuid())
+  noteId      String   // Foreign Key ke Note
+  cards       Json     // Menyimpan array kartu dalam format JSON [{front: "...", back: "..."}]
+  createdAt   DateTime @default(now())
+  
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+

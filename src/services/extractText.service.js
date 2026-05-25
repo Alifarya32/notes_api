@@ -1,82 +1,54 @@
 // src/services/extractText.service.js
 const fs = require('fs');
-const pdf = require('pdf-parse'); // Versi 1.1.1 langsung jadi fungsi
+const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
-const path = require('path');
-
-const cleanText = (text) => {
-  if (!text) return '';
-  return text
-    .replace(/\r\n/g, '\n')
-    .replace(/\n\s*\n/g, '\n')
-    .replace(/[^\S\r\n]+/g, ' ')
-    .trim();
-};
-
-const extractFromPDF = async (filePath) => {
-  try {
-    console.log(`[PDF] Membaca file dari path: ${filePath}`);
-    
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`File tidak ditemukan di path: ${filePath}`);
-    }
-
-    const dataBuffer = fs.readFileSync(filePath);
-    console.log(`[PDF] Ukuran file buffer: ${dataBuffer.length} bytes`);
-
-    const data = await pdf(dataBuffer);
-    
-    console.log(`[PDF] Jumlah halaman: ${data.numpages}`);
-    console.log(`[PDF] Panjang teks mentah: ${data.text.length}`);
-    
-    if (!data.text || data.text.trim() === '') {
-      console.warn('[PDF] PERINGATAN: Teks hasil ekstrak kosong! Kemungkinan PDF adalah gambar/scan.');
-      return ""; 
-    }
-
-    return cleanText(data.text);
-  } catch (error) {
-    console.error('[PDF ERROR DETAIL]:', error);
-    throw new Error(`Gagal mengekstrak teks dari PDF: ${error.message}`);
-  }
-};
-
-const extractFromDOCX = async (filePath) => {
-  try {
-    console.log(`[DOCX] Membaca file dari path: ${filePath}`);
-    const result = await mammoth.extractRawText({ path: filePath });
-    console.log(`[DOCX] Panjang teks mentah: ${result.value.length}`);
-    return cleanText(result.value);
-  } catch (error) {
-    console.error('[DOCX ERROR DETAIL]:', error);
-    throw new Error(`Gagal mengekstrak teks dari DOCX: ${error.message}`);
-  }
-};
-
-const extractFromTXT = async (filePath) => {
-  try {
-    console.log(`[TXT] Membaca file dari path: ${filePath}`);
-    const text = fs.readFileSync(filePath, 'utf8');
-    console.log(`[TXT] Panjang teks mentah: ${text.length}`);
-    return cleanText(text);
-  } catch (error) {
-    console.error('[TXT ERROR DETAIL]:', error);
-    throw new Error(`Gagal membaca file TXT: ${error.message}`);
-  }
-};
 
 const extractTextFromFile = async (filePath) => {
-  const ext = path.extname(filePath).toLowerCase();
-  console.log(`[EXTRACT] Mendeteksi ekstensi file: ${ext}`);
+  try {
+    const fileExtension = filePath.split('.').pop().toLowerCase();
+    let text = "";
 
-  if (ext === '.pdf') {
-    return await extractFromPDF(filePath);
-  } else if (ext === '.docx') {
-    return await extractFromDOCX(filePath);
-  } else if (ext === '.txt') {
-    return await extractFromTXT(filePath);
-  } else {
-    throw new Error('Format file tidak didukung untuk ekstraksi teks');
+    console.log(`[EXTRACT] Processing file: ${filePath}, Ext: ${fileExtension}`);
+
+    if (fileExtension === 'pdf') {
+      const dataBuffer = fs.readFileSync(filePath);
+      const data = await pdfParse(dataBuffer);
+      text = data.text;
+    } 
+    else if (fileExtension === 'docx') {
+      try {
+        // Gunakan mammoth.extractRawText agar lebih ringan dan cepat
+        const result = await mammoth.extractRawText({ path: filePath });
+        text = result.value;
+        
+        if (result.messages && result.messages.length > 0) {
+          console.log('[MAMMOTH WARNINGS]', result.messages);
+        }
+      } catch (mammothError) {
+        console.error('[MAMMOTH ERROR]', mammothError.message);
+        throw new Error(`Gagal mengekstrak teks dari DOCX: ${mammothError.message}`);
+      }
+    } 
+    else if (fileExtension === 'txt') {
+      text = fs.readFileSync(filePath, 'utf8');
+    } 
+    else {
+      throw new Error(`Tipe file tidak didukung: ${fileExtension}`);
+    }
+
+    // Bersihkan teks
+    text = text.replace(/\s+/g, ' ').trim();
+
+    if (!text || text.length < 5) {
+       console.warn('[EXTRACT WARNING] Teks yang diekstrak sangat pendek atau kosong.');
+    }
+
+    return text;
+
+  } catch (error) {
+    console.error('[EXTRACT TEXT CRITICAL ERROR]', error);
+    // Lempar error lagi agar controller tahu ada kegagalan
+    throw error; 
   }
 };
 

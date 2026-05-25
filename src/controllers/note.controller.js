@@ -18,21 +18,18 @@ const axios = require('axios');
 const uploadNote = async (req, res) => {
   try {
     if (!req.file) {
-      return errorResponse(res, 400, 'No file uploaded');
+      return errorResponse(res, 400, 'Tidak ada file yang diupload');
     }
 
     const { userId } = req.user;
-    // Ambil title dari validatedData jika ada, atau pakai nama file
-    const title = req.validatedData?.body?.title || req.file.originalname;
-    
+    const title = req.body.title || req.file.originalname;
     const fileName = req.file.originalname;
-    const fileUrl = req.file.path; // URL dari Cloudinary
+    const fileUrl = req.file.path;
 
     console.log(`[UPLOAD] File received: ${fileName}, URL: ${fileUrl}`);
 
-    // 1. Download file sementara dari Cloudinary ke /tmp (Vercel Temp Dir)
+    // 1. Download file sementara ke /tmp
     const tempDir = '/tmp';
-    // Buat nama file unik sementara agar tidak bentrok
     const tempFileName = `${Date.now()}-${fileName}`;
     const tempFilePath = path.join(tempDir, tempFileName);
     
@@ -52,13 +49,13 @@ const uploadNote = async (req, res) => {
 
     console.log('[UPLOAD] File downloaded to temp:', tempFilePath);
 
-    // 2. Simpan metadata ke DB (Simpan URL Cloudinary)
+    // 2. Simpan metadata ke DB dulu
     let note = await saveNoteMetadata(userId, title, fileName, fileUrl);
 
     // 3. Ekstrak Teks
     let extractedText = "";
     try {
-      console.log('[EXTRACT] Starting text extraction...');
+      console.log('[EXTRACT] Starting extraction...');
       extractedText = await extractTextFromFile(tempFilePath);
       
       if (extractedText) {
@@ -66,9 +63,11 @@ const uploadNote = async (req, res) => {
           where: { id: note.id },
           data: { content: extractedText }
         });
+        console.log('[EXTRACT] Text saved to DB.');
       }
     } catch (extractError) {
-      console.error('[EXTRACT ERROR]', extractError.message);
+      console.error('[EXTRACT FAILED]', extractError.message);
+      // Biarkan proses lanjut, user setidaknya dapat notifikasi file tersimpan
     } finally {
       // Hapus file sementara
       if (fs.existsSync(tempFilePath)) {
@@ -76,7 +75,7 @@ const uploadNote = async (req, res) => {
       }
     }
 
-    // 4. Generate Summary
+    // 4. Generate Summary (Hanya jika teks ada dan cukup panjang)
     if (extractedText && extractedText.length > 50) {
       try {
         console.log('[AI] Generating summary...');
@@ -87,15 +86,15 @@ const uploadNote = async (req, res) => {
           data: { summary: summary }
         });
       } catch (aiError) {
-        console.error('[AI SUMMARY ERROR]', aiError.message);
+        console.error('[AI SUMMARY FAILED]', aiError.message);
       }
     }
 
-    return successResponse(res, 201, 'File uploaded & processed successfully', note);
+    return successResponse(res, 201, 'File berhasil diupload & diproses', note);
 
   } catch (error) {
-    console.error(error);
-    return errorResponse(res, 500, 'Failed to process file');
+    console.error('[UPLOAD CONTROLLER ERROR]', error);
+    return errorResponse(res, 500, 'Gagal memproses file upload');
   }
 };
 
@@ -110,7 +109,6 @@ const getAllNotes = async (req, res) => {
     const { q, page, limit } = req.validatedData.query; 
 
     const skip = (page - 1) * limit;
-
     const whereCondition = { userId: userId };
 
     if (q && typeof q === 'string') {
@@ -141,8 +139,8 @@ const getAllNotes = async (req, res) => {
     return successResponse(res, 200, 'Notes retrieved successfully', {
       data: notes,
       pagination: {
-        page: page,
-        limit: limit,
+        page: parseInt(page),
+        limit: parseInt(limit),
         totalItems: total,
         totalPages: Math.ceil(total / limit),
       },

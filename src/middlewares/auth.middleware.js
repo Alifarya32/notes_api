@@ -21,6 +21,8 @@ const verifyToken = (req, res, next) => {
     req.user = decoded; 
     next();
   } catch (error) {
+    console.log("Detail Error JWT:", error.name, error.message);
+
     return errorResponse(res, 403, 'Token tidak valid atau kedaluwarsa.');
   }
 };

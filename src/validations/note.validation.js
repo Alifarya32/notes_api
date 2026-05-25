@@ -1,19 +1,21 @@
 // src/validations/note.validation.js
 const { z } = require('zod');
 
-// Schema untuk Upload Note (lebih longgar karena pakai multipart/form-data)
+// Untuk Upload, kita hanya validasi jika ada field 'title' di body (opsional)
+// Karena Multer handle file, kita tidak validasi file di sini
 const uploadNoteSchema = z.object({
-  body: z.any().optional(), // Kita skip validasi body ketat untuk multipart
+  body: z.object({
+    title: z.string().min(1, "Title cannot be empty").optional()
+  }).optional(), // Body bisa undefined jika user tidak kirim title
   params: z.object({}).optional(),
   query: z.object({}).optional(),
 });
 
-// Schema untuk Get All Notes (Search & Pagination)
 const getAllNotesSchema = z.object({
   query: z.object({
     q: z.string().optional(),
-    page: z.string().regex(/^\d+$/, "Page harus berupa angka").optional().default("1"),
-    limit: z.string().regex(/^\d+$/, "Limit harus berupa angka").optional().default("10"),
+    page: z.string().regex(/^\d+$/, "Page must be a number").optional().default("1"),
+    limit: z.string().regex(/^\d+$/, "Limit must be a number").optional().default("10"),
   }).transform((data) => ({
     ...data,
     page: parseInt(data.page),
@@ -21,10 +23,9 @@ const getAllNotesSchema = z.object({
   })),
 });
 
-// Schema untuk Generate Quiz/Flashcard (hanya validasi ID di params)
 const generateContentSchema = z.object({
   params: z.object({
-    id: z.string().uuid("ID Note tidak valid"),
+    id: z.string().uuid("Invalid Note ID"),
   }),
 });
 

@@ -11,79 +11,22 @@ const {
 } = require('../validations/note.validation'); 
 const upload = require('../config/multer');
 
-/**
- * @swagger
- * tags:
- *   name: Notes
- *   description: Manajemen Catatan & Fitur AI
- */
+// Public Route
+router.get('/health-check', notesController.healthCheck);
 
-/**
- * @swagger
- * /api/v1/notes/upload:
- *   post:
- *     summary: Upload file catatan (PDF/DOCX/TXT)
- *     tags: [Notes]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               file:
- *                 type: string
- *                 format: binary
- *               title:
- *                 type: string
- *     responses:
- *       201:
- *         description: File berhasil diupload dan diproses
- *       400:
- *         description: Validasi gagal
- *       401:
- *         description: Unauthorized
- */
+// Protected Routes
+
+// 1. Upload Note
+// Kita tidak pakai validateRequest untuk body karena multipart/form-data sulit divalidasi Zod secara langsung
+// Tapi kita tetap pakai verifyToken dan upload.single
 router.post(
   '/upload', 
   verifyToken, 
-  validateRequest(uploadNoteSchema), 
   upload.single('file'), 
   notesController.uploadNote
 );
 
-/**
- * @swagger
- * /api/v1/notes:
- *   get:
- *     summary: Ambil semua catatan dengan pencarian
- *     tags: [Notes]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: q
- *         schema:
- *           type: string
- *         description: Keyword pencarian (judul/konten)
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Nomor halaman
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Jumlah data per halaman
- *     responses:
- *       200:
- *         description: Daftar catatan berhasil diambil
- *       401:
- *         description: Unauthorized
- */
+// 2. Get All Notes (dengan validasi query params)
 router.get(
   '/', 
   verifyToken, 
@@ -91,27 +34,7 @@ router.get(
   notesController.getAllNotes
 );
 
-/**
- * @swagger
- * /api/v1/notes/{id}:
- *   get:
- *     summary: Ambil detail catatan berdasarkan ID
- *     tags: [Notes]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID Catatan
- *     responses:
- *       200:
- *         description: Detail catatan
- *       404:
- *         description: Catatan tidak ditemukan
- */
+// 3. Get Note Detail (dengan validasi params ID)
 router.get(
   '/:id', 
   verifyToken, 
@@ -119,27 +42,7 @@ router.get(
   notesController.getNoteById
 );
 
-/**
- * @swagger
- * /api/v1/notes/{id}/generate-quiz:
- *   post:
- *     summary: Generate Quiz Otomatis dari Catatan
- *     tags: [Notes]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID Catatan
- *     responses:
- *       201:
- *         description: Quiz berhasil dibuat
- *       400:
- *         description: Konten terlalu pendek
- */
+// 4. Generate Quiz
 router.post(
   '/:id/generate-quiz', 
   verifyToken, 
@@ -147,25 +50,7 @@ router.post(
   notesController.generateQuiz
 );
 
-/**
- * @swagger
- * /api/v1/notes/{id}/generate-flashcards:
- *   post:
- *     summary: Generate Flashcard Otomatis dari Catatan
- *     tags: [Notes]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID Catatan
- *     responses:
- *       201:
- *         description: Flashcard berhasil dibuat
- */
+// 5. Generate Flashcards
 router.post(
   '/:id/generate-flashcards', 
   verifyToken, 

@@ -6,15 +6,15 @@ const cloudinary = require('./cloudinary');
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'notes-api-uploads', // Nama folder di Cloudinary
+    folder: 'notes-api-v2', // Nama folder baru di Cloudinary
     allowed_formats: ['pdf', 'docx', 'txt'],
-    resource_type: 'raw', // PENTING: Agar bisa upload PDF/DOCX, bukan cuma gambar
+    resource_type: 'raw', // Wajib untuk non-gambar
   },
 });
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // Max 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
     const allowedMimes = [
       'application/pdf',

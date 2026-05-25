@@ -2,9 +2,9 @@
 const { saveNoteMetadata } = require('../services/upload.service');
 const { extractTextFromFile } = require('../services/extractText.service');
 const { generateSummary } = require('../services/ai.service');
-const { successResponse, errorResponse } = require('../utils/apiResponse');
 const { generateQuizFromText } = require('../services/quiz.service');
-const { generateFlashcardsFromText } = require('../services/flashcard.service'); 
+const { generateFlashcardsFromText } = require('../services/flashcard.service');
+const { successResponse, errorResponse } = require('../utils/apiResponse');
 const prisma = require('../config/db');
 const fs = require('fs');
 const path = require('path');
@@ -15,26 +15,26 @@ const axios = require('axios');
  * @route   POST /api/v1/notes/upload
  * @access  Private
  */
-// src/controllers/note.controller.js
- // Pastikan sudah install axios
 const uploadNote = async (req, res) => {
   try {
     if (!req.file) {
-      return errorResponse(res, 400, 'Tidak ada file yang diupload');
+      return errorResponse(res, 400, 'No file uploaded');
     }
 
     const { userId } = req.user;
-    const { title } = req.body;
+    // Ambil title dari validatedData jika ada, atau pakai nama file
+    const title = req.validatedData?.body?.title || req.file.originalname;
     
     const fileName = req.file.originalname;
     const fileUrl = req.file.path; // URL dari Cloudinary
 
-    console.log(`[UPLOAD] Menerima file: ${fileName}`);
-    console.log(`[UPLOAD] URL Cloudinary: ${fileUrl}`);
+    console.log(`[UPLOAD] File received: ${fileName}, URL: ${fileUrl}`);
 
     // 1. Download file sementara dari Cloudinary ke /tmp (Vercel Temp Dir)
     const tempDir = '/tmp';
-    const tempFilePath = path.join(tempDir, fileName);
+    // Buat nama file unik sementara agar tidak bentrok
+    const tempFileName = `${Date.now()}-${fileName}`;
+    const tempFilePath = path.join(tempDir, tempFileName);
     
     const response = await axios({
       url: fileUrl,
@@ -50,15 +50,15 @@ const uploadNote = async (req, res) => {
       writer.on('error', reject);
     });
 
-    console.log('[UPLOAD] File didownload sementara ke:', tempFilePath);
+    console.log('[UPLOAD] File downloaded to temp:', tempFilePath);
 
-    // 2. Simpan metadata ke DB (Simpan URL Cloudinary, bukan path lokal)
+    // 2. Simpan metadata ke DB (Simpan URL Cloudinary)
     let note = await saveNoteMetadata(userId, title, fileName, fileUrl);
 
     // 3. Ekstrak Teks
     let extractedText = "";
     try {
-      console.log('[EXTRACT] Mulai ekstraksi teks...');
+      console.log('[EXTRACT] Starting text extraction...');
       extractedText = await extractTextFromFile(tempFilePath);
       
       if (extractedText) {
@@ -70,16 +70,16 @@ const uploadNote = async (req, res) => {
     } catch (extractError) {
       console.error('[EXTRACT ERROR]', extractError.message);
     } finally {
-      // Hapus file sementara agar tidak memenuhi memori
+      // Hapus file sementara
       if (fs.existsSync(tempFilePath)) {
         fs.unlinkSync(tempFilePath);
       }
     }
 
-    // 4. Generate Summary (Sama seperti sebelumnya)
+    // 4. Generate Summary
     if (extractedText && extractedText.length > 50) {
       try {
-        console.log('[AI] Mulai generate summary...');
+        console.log('[AI] Generating summary...');
         const summary = await generateSummary(extractedText);
         
         note = await prisma.note.update({
@@ -87,172 +87,31 @@ const uploadNote = async (req, res) => {
           data: { summary: summary }
         });
       } catch (aiError) {
-        console.error('[AI ERROR]', aiError.message);
+        console.error('[AI SUMMARY ERROR]', aiError.message);
       }
     }
 
-    return successResponse(res, 201, 'File berhasil diupload & diproses', note);
+    return successResponse(res, 201, 'File uploaded & processed successfully', note);
 
   } catch (error) {
     console.error(error);
-    return errorResponse(res, 500, 'Gagal memproses file');
+    return errorResponse(res, 500, 'Failed to process file');
   }
 };
-
-/**
- * @desc    Get detail note by ID
- * @route   GET /api/v1/notes/:id
- * @access  Private
- */
-const getNoteById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { userId } = req.user; // Dari middleware auth
-
-    // Cari note berdasarkan ID dan pastikan milik user yang login
-    const note = await prisma.note.findFirst({
-      where: {
-        id: id,
-        userId: userId, 
-      },
-    });
-
-    if (!note) {
-      return errorResponse(res, 404, 'Catatan tidak ditemukan atau akses ditolak');
-    }
-
-    return successResponse(res, 200, 'Detail catatan berhasil diambil', note);
-
-  } catch (error) {
-    console.error(error);
-    return errorResponse(res, 500, 'Gagal mengambil detail catatan');
-  }
-};
-
-/**
- * @desc    Health check untuk modul notes
- * @route   GET /api/v1/notes/health-check
- * @access  Public
- */
-const healthCheck = (req, res) => {
-  return res.status(200).json({
-    success: true,
-    message: 'Notes Module is active',
-    timestamp: new Date().toISOString(),
-  });
-};
-
-
-/**
- * @desc    Generate Quiz dari Note ID
- * @route   POST /api/v1/notes/:id/generate-quiz
- * @access  Private
- */
-const generateQuiz = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { userId } = req.user;
-
-    // 1. Ambil Note beserta isinya
-    const note = await prisma.note.findFirst({
-      where: {
-        id: id,
-        userId: userId,
-      },
-    });
-
-    if (!note) {
-      return errorResponse(res, 404, 'Catatan tidak ditemukan atau akses ditolak');
-    }
-
-    if (!note.content || note.content.length < 100) {
-      return errorResponse(res, 400, 'Konten catatan terlalu pendek untuk dibuatkan quiz');
-    }
-
-    const questions = await generateQuizFromText(note.content);
-
-    // 4. Simpan ke Database
-    const newQuiz = await prisma.quiz.create({
-      data: {
-        noteId: id,
-        questions: questions, // Prisma otomatis handle JSON
-      },
-    });
-
-    return successResponse(res, 201, 'Quiz berhasil dibuat', newQuiz);
-
-  } catch (error) {
-    console.error(error);
-    return errorResponse(res, 500, error.message || 'Gagal membuat quiz');
-  }
-};
-
-// src/controllers/note.controller.js
-
-/**
- * @desc    Generate Flashcards dari Note ID
- * @route   POST /api/v1/notes/:id/generate-flashcards
- * @access  Private
- */
-const generateFlashcards = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { userId } = req.user;
-
-    // 1. Ambil Note beserta isinya
-    const note = await prisma.note.findFirst({
-      where: {
-        id: id,
-        userId: userId,
-      },
-    });
-
-    if (!note) {
-      return errorResponse(res, 404, 'Catatan tidak ditemukan atau akses ditolak');
-    }
-
-    if (!note.content || note.content.length < 100) {
-      return errorResponse(res, 400, 'Konten catatan terlalu pendek untuk dibuatkan flashcard');
-    }
-
-    // 2. Generate Flashcard via AI
-    const cards = await generateFlashcardsFromText(note.content);
-
-    // 3. Simpan ke Database
-    const newFlashcardSet = await prisma.flashcard.create({
-      data: {
-        noteId: id,
-        cards: cards, 
-      },
-    });
-
-    return successResponse(res, 201, 'Flashcard berhasil dibuat', newFlashcardSet);
-
-  } catch (error) {
-    console.error(error);
-    return errorResponse(res, 500, error.message || 'Gagal membuat flashcard');
-  }
-};
-
 
 /**
  * @desc    Get all notes with search and filter
  * @route   GET /api/v1/notes
  * @access  Private
  */
-
 const getAllNotes = async (req, res) => {
   try {
     const { userId } = req.user;
-    
-    // Ambil data yang sudah divalidasi dan ditransformasi oleh middleware
     const { q, page, limit } = req.validatedData.query; 
 
     const skip = (page - 1) * limit;
 
-    const whereCondition = {
-      userId: userId,
-    };
+    const whereCondition = { userId: userId };
 
     if (q && typeof q === 'string') {
       whereCondition.OR = [
@@ -266,7 +125,7 @@ const getAllNotes = async (req, res) => {
       prisma.note.findMany({
         where: whereCondition,
         skip: skip,
-        take: limit, // Sekarang ini sudah Integer, bukan String!
+        take: limit,
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
@@ -279,7 +138,7 @@ const getAllNotes = async (req, res) => {
       prisma.note.count({ where: whereCondition }),
     ]);
 
-    return successResponse(res, 200, 'Daftar catatan berhasil diambil', {
+    return successResponse(res, 200, 'Notes retrieved successfully', {
       data: notes,
       pagination: {
         page: page,
@@ -291,15 +150,132 @@ const getAllNotes = async (req, res) => {
 
   } catch (error) {
     console.error(error);
-    return errorResponse(res, 500, 'Gagal mengambil daftar catatan');
+    return errorResponse(res, 500, 'Failed to retrieve notes');
   }
+};
+
+/**
+ * @desc    Get detail note by ID
+ * @route   GET /api/v1/notes/:id
+ * @access  Private
+ */
+const getNoteById = async (req, res) => {
+  try {
+    const { id } = req.validatedData.params;
+    const { userId } = req.user;
+
+    const note = await prisma.note.findFirst({
+      where: { id: id, userId: userId },
+    });
+
+    if (!note) {
+      return errorResponse(res, 404, 'Note not found or access denied');
+    }
+
+    return successResponse(res, 200, 'Note details retrieved', note);
+
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, 500, 'Failed to retrieve note details');
+  }
+};
+
+/**
+ * @desc    Generate Quiz from Note ID
+ * @route   POST /api/v1/notes/:id/generate-quiz
+ * @access  Private
+ */
+const generateQuiz = async (req, res) => {
+  try {
+    const { id } = req.validatedData.params;
+    const { userId } = req.user;
+
+    const note = await prisma.note.findFirst({
+      where: { id: id, userId: userId },
+    });
+
+    if (!note) {
+      return errorResponse(res, 404, 'Note not found or access denied');
+    }
+
+    if (!note.content || note.content.length < 100) {
+      return errorResponse(res, 400, 'Note content is too short for quiz generation');
+    }
+
+    const questions = await generateQuizFromText(note.content);
+
+    const newQuiz = await prisma.quiz.create({
+      data: {
+        noteId: id,
+        questions: questions,
+      },
+    });
+
+    return successResponse(res, 201, 'Quiz generated successfully', newQuiz);
+
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, 500, error.message || 'Failed to generate quiz');
+  }
+};
+
+/**
+ * @desc    Generate Flashcards from Note ID
+ * @route   POST /api/v1/notes/:id/generate-flashcards
+ * @access  Private
+ */
+const generateFlashcards = async (req, res) => {
+  try {
+    const { id } = req.validatedData.params;
+    const { userId } = req.user;
+
+    const note = await prisma.note.findFirst({
+      where: { id: id, userId: userId },
+    });
+
+    if (!note) {
+      return errorResponse(res, 404, 'Note not found or access denied');
+    }
+
+    if (!note.content || note.content.length < 100) {
+      return errorResponse(res, 400, 'Note content is too short for flashcard generation');
+    }
+
+    const cards = await generateFlashcardsFromText(note.content);
+
+    const newFlashcardSet = await prisma.flashcard.create({
+      data: {
+        noteId: id,
+        cards: cards,
+      },
+    });
+
+    return successResponse(res, 201, 'Flashcards generated successfully', newFlashcardSet);
+
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, 500, error.message || 'Failed to generate flashcards');
+  }
+};
+
+/**
+ * @desc    Health check
+ * @route   GET /api/v1/notes/health-check
+ * @access  Public
+ */
+const healthCheck = (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: 'Notes Module is active',
+    timestamp: new Date().toISOString(),
+  });
 };
 
 module.exports = {
   healthCheck,
   uploadNote,
+  getAllNotes,
   getNoteById,
   generateQuiz,
-  generateFlashcards,
-  getAllNotes // Jangan lupa export fungsi baru ini
+  generateFlashcards
 };

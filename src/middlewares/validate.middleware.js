@@ -4,29 +4,32 @@ const { errorResponse } = require('../utils/apiResponse');
 const validateRequest = (schema) => {
   return (req, res, next) => {
     try {
-      const result = schema.safeParse({
-        body: req.body,
-        query: req.query,
-        params: req.params,
-      });
+      // Siapkan objek data yang akan divalidasi
+      const dataToValidate = {
+        body: req.body || {}, // Default empty object jika undefined
+        query: req.query || {},
+        params: req.params || {},
+      };
+
+      const result = schema.safeParse(dataToValidate);
 
       if (!result.success) {
         const firstError = result.error.issues ? result.error.issues[0] : result.error.errors?.[0];
         
         if (firstError) {
-          return errorResponse(res, 400, `Validasi Gagal: ${firstError.message}`);
+          return errorResponse(res, 400, `Validation Failed: ${firstError.message}`);
         } else {
-          return errorResponse(res, 400, 'Validasi Gagal: Format input tidak sesuai');
+          return errorResponse(res, 400, 'Validation Failed: Invalid input format');
         }
       }
 
-      // PENTING: Simpan hasil transformasi ke req.validatedData
+      // Simpan hasil transformasi (misal: page string -> int) ke req.validatedData
       req.validatedData = result.data;
       
       next();
     } catch (error) {
       console.error('Validation Middleware Error:', error);
-      return errorResponse(res, 500, 'Internal Server Error pada Validasi');
+      return errorResponse(res, 500, 'Internal Server Error in Validation');
     }
   };
 };

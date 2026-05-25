@@ -2,4 +2,4 @@ node_modules/
 .env
 uploads/
 prisma/migrations/
-.vercel/
+.vercel/ # Vercel config folder

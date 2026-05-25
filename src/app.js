@@ -22,14 +22,14 @@ app.use('/api/v1/notes', notesRoutes);
 
 // Health Check Root & Global
 app.get('/', (req, res) => {
-  res.send('AI Notes API is running successfully.');
+  res.send('API Berhasil Terhubung.');
 });
 
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     success: true,
     status: 'OK', 
-    message: 'AI Notes API is running' 
+    message: 'API Berhasil Terhubung' 
   });
 });
 

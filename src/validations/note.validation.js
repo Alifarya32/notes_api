@@ -1,19 +1,17 @@
 // src/validations/note.validation.js
 const { z } = require('zod');
 
-// Schema untuk Upload Note
+// Schema untuk Upload Note (lebih longgar karena pakai multipart/form-data)
 const uploadNoteSchema = z.object({
-  body: z.object({
-    title: z.string().min(1, "Judul tidak boleh kosong").optional(), // Opsional karena bisa pakai nama file
-  }),
-  // Kita tidak validasi file di sini karena ditangani Multer, 
-  // tapi kita bisa validasi keberadaan req.file di controller nanti.
+  body: z.any().optional(), // Kita skip validasi body ketat untuk multipart
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
 });
 
 // Schema untuk Get All Notes (Search & Pagination)
 const getAllNotesSchema = z.object({
   query: z.object({
-    q: z.string().optional(), // Keyword pencarian
+    q: z.string().optional(),
     page: z.string().regex(/^\d+$/, "Page harus berupa angka").optional().default("1"),
     limit: z.string().regex(/^\d+$/, "Limit harus berupa angka").optional().default("10"),
   }).transform((data) => ({

@@ -5,7 +5,6 @@ const notesController = require('../controllers/note.controller');
 const { verifyToken } = require('../middlewares/auth.middleware');
 const { validateRequest } = require('../middlewares/validate.middleware'); 
 const { 
-  uploadNoteSchema, 
   getAllNotesSchema, 
   generateContentSchema 
 } = require('../validations/note.validation'); 

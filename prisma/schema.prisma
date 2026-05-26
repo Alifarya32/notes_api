@@ -46,6 +46,8 @@ model Note {
   flashcards Flashcard[]
   user       User        @relation(fields: [userId], references: [id])
   quizzes    Quiz[]
+
+  researchReport ResearchReport?
 }
 
 model Quiz {
@@ -63,4 +65,20 @@ model Flashcard {
   cards     Json
   createdAt DateTime @default(now())
   note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+
+model ResearchReport {
+  id          String   @id @default(uuid())
+  noteId      String   @unique
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  
+  executiveSummary String?
+  keyFindings      String[] // Array of strings
+  methodology      String?
+  criticalAnalysis String?
+  researchGaps     String[] // Array of strings
+  extractedRefs    String[] // Array of strings
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

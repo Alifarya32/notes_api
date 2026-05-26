@@ -57,4 +57,12 @@ router.post(
   notesController.generateFlashcards
 );
 
+// Route Baru untuk Riset
+router.post(
+  '/:id/research-report', 
+  verifyToken, 
+  // validateRequest(someSchemaIfAny), 
+  researchController.generateResearchReport
+);
+
 module.exports = router;

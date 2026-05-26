@@ -4,9 +4,14 @@ const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Import Routes
 const authRoutes = require('./routes/auth.routes');
 const notesRoutes = require('./routes/notes.routes');
+const {
+  securityHeaders,
+  corsOptionsDelegate,
+  authRateLimiter,
+  apiRateLimiter,
+} = require('./middlewares/security.middleware');
 
 dotenv.config();
 
@@ -14,12 +19,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// --- MIDDLEWARES ---
-app.use(cors());
-app.use(express.json());
+// --- SECURITY MIDDLEWARES ---
+app.use(securityHeaders);
+app.use(cors(corsOptionsDelegate));
+app.use(express.json({ limit: '1mb' }));
+app.use('/api/', apiRateLimiter);
 
-// --- API ROUTES (harus sebelum static files) ---
-app.use('/api/v1/auth', authRoutes);
+// --- API ROUTES ---
+app.use('/api/v1/auth', authRateLimiter, authRoutes);
 app.use('/api/v1/notes', notesRoutes);
 
 app.get('/health', (req, res) => {

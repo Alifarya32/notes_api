@@ -294,6 +294,35 @@ a:hover {
   text-decoration: underline;
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.25rem 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(168, 85, 247, 0.2);
+}
+
+.google-signin-wrap {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.auth-google-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 /* ==========================================================================
    DASHBOARD LAYOUT
    ========================================================================== */

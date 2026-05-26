@@ -1,13 +1,7 @@
 /**
  * AI Notes — Dashboard (List, Search, Upload)
+ * Bergantung pada session.js untuk autentikasi aman.
  */
-
-const API_BASE_URL = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL)
-  ? API_CONFIG.BASE_URL.replace(/\/$/, '')
-  : 'https://notesa-api.vercel.app';
-
-const TOKEN_KEY = 'ai_notes_token';
-const USER_KEY = 'ai_notes_user';
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.txt', '.doc'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -42,68 +36,6 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = String(text ?? '');
   return div.innerHTML;
-}
-
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-function getUser() {
-  try {
-    return JSON.parse(localStorage.getItem(USER_KEY) || 'null');
-  } catch {
-    return null;
-  }
-}
-
-function requireAuth() {
-  if (!getToken()) {
-    window.location.href = 'index.html';
-    return false;
-  }
-  return true;
-}
-
-function logout() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-  window.location.href = 'index.html';
-}
-
-async function apiRequest(endpoint, options = {}) {
-  const token = getToken();
-  const url = `${API_BASE_URL}${endpoint}`;
-
-  const headers = { ...options.headers };
-
-  if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-  }
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(url, { ...options, headers });
-  let data;
-
-  try {
-    data = await response.json();
-  } catch {
-    throw new Error('Respons server tidak valid');
-  }
-
-  if (response.status === 401) {
-    showToast('Sesi berakhir. Silakan login kembali.');
-    setTimeout(logout, 1200);
-    throw new Error('Unauthorized');
-  }
-
-  if (!response.ok || data.success === false) {
-    throw new Error(data.message || `Request gagal (${response.status})`);
-  }
-
-  return data;
 }
 
 function formatDate(dateStr) {
@@ -183,7 +115,7 @@ async function fetchNotes(query = '') {
     const params = new URLSearchParams({ page: '1', limit: '50' });
     if (query.trim()) params.set('q', query.trim());
 
-    const result = await apiRequest(`/api/v1/notes?${params.toString()}`);
+    const result = await authFetch(`/api/v1/notes?${params.toString()}`);
     const notes = result.data?.data || result.data || [];
     renderNotes(Array.isArray(notes) ? notes : []);
   } catch (err) {
@@ -231,7 +163,7 @@ async function uploadFile(file) {
 
   try {
     progressFill.style.width = '60%';
-    await apiRequest('/api/v1/notes/upload', {
+    await authFetch('/api/v1/notes/upload', {
       method: 'POST',
       body: formData,
     });

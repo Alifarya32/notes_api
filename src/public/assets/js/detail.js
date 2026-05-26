@@ -1,13 +1,7 @@
 /**
  * AI Notes — Detail (Summary, Quiz, Flashcards)
+ * Bergantung pada session.js untuk autentikasi aman.
  */
-
-const API_BASE_URL = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL)
-  ? API_CONFIG.BASE_URL.replace(/\/$/, '')
-  : 'https://notesa-api.vercel.app';
-
-const TOKEN_KEY = 'ai_notes_token';
-const USER_KEY = 'ai_notes_user';
 
 let noteId = null;
 let currentNote = null;
@@ -42,18 +36,6 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = String(text ?? '');
   return div.innerHTML;
-}
-
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-function requireAuth() {
-  if (!getToken()) {
-    window.location.href = 'index.html';
-    return false;
-  }
-  return true;
 }
 
 function getNoteIdFromUrl() {
@@ -93,45 +75,6 @@ function loadCachedFlashcards() {
 
 function saveCachedFlashcards(cards) {
   sessionStorage.setItem(flashcardCacheKey(noteId), JSON.stringify(cards));
-}
-
-async function apiRequest(endpoint, options = {}) {
-  const token = getToken();
-  const url = `${API_BASE_URL}${endpoint}`;
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(url, { ...options, headers });
-  let data;
-
-  try {
-    data = await response.json();
-  } catch {
-    throw new Error('Respons server tidak valid');
-  }
-
-  if (response.status === 401) {
-    showToast('Sesi berakhir. Silakan login kembali.');
-    setTimeout(() => {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-      window.location.href = 'index.html';
-    }, 1200);
-    throw new Error('Unauthorized');
-  }
-
-  if (!response.ok || data.success === false) {
-    throw new Error(data.message || `Request gagal (${response.status})`);
-  }
-
-  return data;
 }
 
 function formatDate(dateStr) {
@@ -300,7 +243,7 @@ async function generateQuiz(regenerate = false) {
   btn.textContent = 'Membuat kuis AI...';
 
   try {
-    const result = await apiRequest(`/api/v1/notes/${noteId}/generate-quiz`, {
+    const result = await authFetch(`/api/v1/notes/${noteId}/generate-quiz`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
@@ -369,7 +312,7 @@ async function generateFlashcards(regenerate = false) {
   btn.textContent = 'Membuat flashcards AI...';
 
   try {
-    const result = await apiRequest(`/api/v1/notes/${noteId}/generate-flashcards`, {
+    const result = await authFetch(`/api/v1/notes/${noteId}/generate-flashcards`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
@@ -402,7 +345,7 @@ async function loadNoteDetail() {
   }
 
   try {
-    const result = await apiRequest(`/api/v1/notes/${noteId}`);
+    const result = await authFetch(`/api/v1/notes/${noteId}`);
     currentNote = result.data;
     renderNoteHeader(currentNote);
     renderSummary(currentNote);

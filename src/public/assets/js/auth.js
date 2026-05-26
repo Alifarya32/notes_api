@@ -1,13 +1,6 @@
 /**
- * AI Notes — Auth (Login & Register)
+ * AI Notes — Auth (Login, Register, Google)
  */
-
-const API_BASE_URL = (typeof API_CONFIG !== 'undefined' && API_CONFIG.BASE_URL)
-  ? API_CONFIG.BASE_URL.replace(/\/$/, '')
-  : 'https://notesa-api.vercel.app';
-
-const TOKEN_KEY = 'ai_notes_token';
-const USER_KEY = 'ai_notes_user';
 
 function showToast(message, type = 'error') {
   const container = document.getElementById('toast-container');
@@ -39,31 +32,19 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function saveSession(token, user) {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
-
-function redirectIfLoggedIn() {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (token) {
-    window.location.href = 'dashboard.html';
-  }
+function getApiBase() {
+  return typeof getApiBaseUrl === 'function'
+    ? getApiBaseUrl()
+    : (API_CONFIG?.BASE_URL || 'https://notesa-api.vercel.app').replace(/\/$/, '');
 }
 
 async function apiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+  const response = await fetch(`${getApiBase()}${endpoint}`, {
+    headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
-  };
+  });
 
-  const response = await fetch(url, config);
   let data;
-
   try {
     data = await response.json();
   } catch {
@@ -75,6 +56,27 @@ async function apiRequest(endpoint, options = {}) {
   }
 
   return data;
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function redirectIfLoggedIn() {
+  if (typeof isLoggedIn === 'function' && isLoggedIn()) {
+    window.location.href = 'dashboard.html';
+  }
 }
 
 function setFormLoading(form, loading) {
@@ -107,6 +109,59 @@ function initAuthToggle() {
   });
 }
 
+async function handleGoogleCredential(response) {
+  try {
+    const result = await apiRequest('/api/v1/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential: response.credential }),
+    });
+
+    saveSession(result.data);
+    showToast('Login Google berhasil!', 'success');
+    setTimeout(() => {
+      window.location.href = 'dashboard.html';
+    }, 500);
+  } catch (err) {
+    showToast(err.message || 'Login Google gagal');
+  }
+}
+
+async function initGoogleSignIn() {
+  const container = document.getElementById('google-signin-btn');
+  if (!container) return;
+
+  try {
+    const result = await apiRequest('/api/v1/auth/config');
+    const { googleEnabled, googleClientId } = result.data || {};
+
+    if (!googleEnabled || !googleClientId) {
+      container.innerHTML =
+        '<p class="auth-google-hint">Login Google belum dikonfigurasi di server.</p>';
+      return;
+    }
+
+    await loadScript('https://accounts.google.com/gsi/client');
+
+    window.google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: handleGoogleCredential,
+      auto_select: false,
+    });
+
+    window.google.accounts.id.renderButton(container, {
+      theme: 'filled_black',
+      size: 'large',
+      width: Math.min(360, container.offsetWidth || 360),
+      text: 'continue_with',
+      locale: 'id',
+      shape: 'rectangular',
+    });
+  } catch (err) {
+    console.error('Google Sign-In init:', err);
+    container.innerHTML = '<p class="auth-google-hint">Gagal memuat tombol Google.</p>';
+  }
+}
+
 async function handleLogin(e) {
   e.preventDefault();
   const form = e.target;
@@ -126,10 +181,8 @@ async function handleLogin(e) {
       body: JSON.stringify({ email, password }),
     });
 
-    const { token, user } = result.data;
-    saveSession(token, user);
+    saveSession(result.data);
     showToast('Login berhasil! Mengalihkan...', 'success');
-
     setTimeout(() => {
       window.location.href = 'dashboard.html';
     }, 600);
@@ -153,8 +206,13 @@ async function handleRegister(e) {
     return;
   }
 
-  if (password.length < 6) {
-    showToast('Password minimal 6 karakter');
+  if (password.length < 8) {
+    showToast('Password minimal 8 karakter dengan huruf dan angka');
+    return;
+  }
+
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+    showToast('Password harus mengandung huruf dan angka');
     return;
   }
 
@@ -167,7 +225,6 @@ async function handleRegister(e) {
     });
 
     showToast('Registrasi berhasil! Silakan masuk.', 'success');
-
     document.getElementById('auth-toggle-btn').click();
     document.getElementById('login-email').value = email;
   } catch (err) {
@@ -181,6 +238,7 @@ async function handleRegister(e) {
 document.addEventListener('DOMContentLoaded', () => {
   redirectIfLoggedIn();
   initAuthToggle();
+  initGoogleSignIn();
 
   document.getElementById('login-form').addEventListener('submit', handleLogin);
   document.getElementById('register-form').addEventListener('submit', handleRegister);

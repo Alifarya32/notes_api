@@ -1,10 +1,10 @@
 // src/middlewares/auth.middleware.js
 const jwt = require('jsonwebtoken');
+const prisma = require('../config/db');
 const config = require('../config/env');
 const { errorResponse } = require('../utils/apiResponse');
 
-const verifyToken = (req, res, next) => {
-  // Ambil token dari Header: Authorization: Bearer <token>
+const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,15 +14,27 @@ const verifyToken = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    // Verifikasi token
-    const decoded = jwt.verify(token, config.jwtSecret || process.env.JWT_SECRET);
-    
-    // Simpan data user di request object agar bisa diakses di controller nanti
-    req.user = decoded; 
+    const decoded = jwt.verify(token, config.jwtSecret);
+
+    if (decoded.type && decoded.type !== 'access') {
+      return errorResponse(res, 403, 'Token tidak valid.');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!user) {
+      return errorResponse(res, 401, 'Akun tidak ditemukan.');
+    }
+
+    req.user = { userId: user.id, email: user.email, name: user.name };
     next();
   } catch (error) {
-    console.log("Detail Error JWT:", error.name, error.message);
-
+    if (error.name === 'TokenExpiredError') {
+      return errorResponse(res, 401, 'Sesi kedaluwarsa. Silakan login kembali.');
+    }
     return errorResponse(res, 403, 'Token tidak valid atau kedaluwarsa.');
   }
 };

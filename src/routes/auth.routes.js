@@ -3,19 +3,22 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { verifyToken } = require('../middlewares/auth.middleware');
+const { validateRequest } = require('../middlewares/validate.middleware');
+const {
+  registerSchema,
+  loginSchema,
+  googleSchema,
+  refreshSchema,
+} = require('../validations/auth.validation');
 
-// Public Routes
-router.post('/register', authController.register);
-router.post('/login', authController.login);
+router.get('/config', authController.getAuthConfig);
 
-// Protected Route (Contoh: Get Profile)
-router.get('/me', verifyToken, (req, res) => {
-  // req.user sudah diisi oleh middleware verifyToken
-  res.status(200).json({
-    success: true,
-    message: 'Ini adalah data profil Anda',
-    data: req.user,
-  });
-});
+router.post('/register', validateRequest(registerSchema), authController.register);
+router.post('/login', validateRequest(loginSchema), authController.login);
+router.post('/google', validateRequest(googleSchema), authController.googleAuth);
+router.post('/refresh', validateRequest(refreshSchema), authController.refresh);
+
+router.post('/logout', verifyToken, authController.logout);
+router.get('/me', verifyToken, authController.getMe);
 
 module.exports = router;

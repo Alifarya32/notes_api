@@ -41,6 +41,9 @@
           />
         </div>
         <button type="submit" class="btn btn-primary" id="login-submit">Masuk</button>
+
+        <div class="auth-divider" aria-hidden="true"><span>atau</span></div>
+        <div id="google-signin-btn" class="google-signin-wrap"></div>
       </form>
 
       <form id="register-form" class="auth-form" novalidate>
@@ -72,9 +75,9 @@
             type="password"
             id="register-password"
             class="form-input"
-            placeholder="Minimal 6 karakter"
+            placeholder="Min. 8 karakter, huruf + angka"
             autocomplete="new-password"
-            minlength="6"
+            minlength="8"
             required
           />
         </div>
@@ -89,6 +92,7 @@
   </main>
 
   <script src="assets/js/config.js"></script>
+  <script src="assets/js/session.js"></script>
   <script src="assets/js/auth.js"></script>
 </body>
 </html>

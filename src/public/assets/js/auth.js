@@ -58,21 +58,6 @@ async function apiRequest(endpoint, options = {}) {
   return data;
 }
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve();
-      return;
-    }
-    const s = document.createElement('script');
-    s.src = src;
-    s.async = true;
-    s.onload = resolve;
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-}
-
 function redirectIfLoggedIn() {
   if (typeof isLoggedIn === 'function' && isLoggedIn()) {
     window.location.href = 'dashboard.html';
@@ -109,23 +94,6 @@ function initAuthToggle() {
   });
 }
 
-async function handleGoogleCredential(response) {
-  try {
-    const result = await apiRequest('/api/v1/auth/google', {
-      method: 'POST',
-      body: JSON.stringify({ credential: response.credential }),
-    });
-
-    saveSession(result.data);
-    showToast('Login Google berhasil!', 'success');
-    setTimeout(() => {
-      window.location.href = 'dashboard.html';
-    }, 500);
-  } catch (err) {
-    showToast(err.message || 'Login Google gagal');
-  }
-}
-
 async function resolveGoogleClientId() {
   let fromServer = null;
 
@@ -144,6 +112,23 @@ async function resolveGoogleClientId() {
   return fromServer || fromConfig || null;
 }
 
+function startGoogleLogin(clientId) {
+  const nonce = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+  sessionStorage.setItem('google_oauth_nonce', nonce);
+
+  const redirectUri = `${window.location.origin}/google-callback.html`;
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'id_token',
+    scope: 'openid email profile',
+    nonce,
+    prompt: 'select_account',
+  });
+
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
 async function initGoogleSignIn() {
   const container = document.getElementById('google-signin-btn');
   if (!container) return;
@@ -154,39 +139,30 @@ async function initGoogleSignIn() {
     if (!googleClientId) {
       container.innerHTML = `
         <p class="auth-google-hint">
-          Tombol Google belum aktif.<br />
-          1) Buat OAuth Client ID di Google Cloud<br />
-          2) Isi <code>GOOGLE_CLIENT_ID</code> di Vercel → Settings → Environment Variables<br />
-          3) Isi juga di <code>assets/js/config.js</code><br />
-          4) Redeploy project Vercel
+          Login Google belum aktif.<br />
+          Set <code>GOOGLE_CLIENT_ID</code> di Vercel lalu redeploy.
         </p>`;
       return;
     }
 
-    await loadScript('https://accounts.google.com/gsi/client');
+    container.innerHTML = `
+      <button type="button" class="btn btn-google" id="btn-google-login" aria-label="Masuk dengan Google">
+        <svg class="btn-google__icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Masuk dengan Google
+      </button>`;
 
-    window.google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: handleGoogleCredential,
-      auto_select: false,
-      use_fedcm_for_prompt: false,
-      itp_support: true,
-      cancel_on_tap_outside: true,
-    });
-
-    window.google.accounts.id.renderButton(container, {
-      theme: 'filled_black',
-      size: 'large',
-      width: Math.min(360, container.offsetWidth || 360),
-      text: 'continue_with',
-      locale: 'id',
-      shape: 'rectangular',
-      type: 'standard',
+    document.getElementById('btn-google-login').addEventListener('click', () => {
+      startGoogleLogin(googleClientId);
     });
   } catch (err) {
     console.error('Google Sign-In init:', err);
     container.innerHTML =
-      '<p class="auth-google-hint">Gagal memuat tombol Google. Cek Authorized origins di Google Console.</p>';
+      '<p class="auth-google-hint">Gagal memuat login Google.</p>';
   }
 }
 
@@ -263,10 +239,20 @@ async function handleRegister(e) {
   }
 }
 
+function showUrlAuthError() {
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get('error');
+  if (error) {
+    showToast(decodeURIComponent(error).replace(/_/g, ' '), 'error');
+    window.history.replaceState({}, '', 'index.html');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   redirectIfLoggedIn();
   initAuthToggle();
   initGoogleSignIn();
+  showUrlAuthError();
 
   document.getElementById('login-form').addEventListener('submit', handleLogin);
   document.getElementById('register-form').addEventListener('submit', handleRegister);

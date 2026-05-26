@@ -151,15 +151,20 @@ Frontend dan API berjalan di port yang sama.
    - `https://notesa-api.vercel.app`
    - `http://localhost:3000`
    - `http://127.0.0.1:5500` (opsional, Live Server)
-4. Salin **Client ID**
-5. Set di **Vercel** → Environment Variables → `GOOGLE_CLIENT_ID`
-6. (Opsional) Isi juga di `src/public/assets/js/config.js`:
+4. **Authorized redirect URIs** (wajib):
+   - `https://notesa-api.vercel.app/google-callback.html`
+   - `http://localhost:3000/google-callback.html`
+5. Salin **Client ID**
+6. Set di **Vercel** → Environment Variables → `GOOGLE_CLIENT_ID`
+7. (Opsional) Isi juga di `src/public/assets/js/config.js`:
 
 ```javascript
 GOOGLE_CLIENT_ID: 'xxxx.apps.googleusercontent.com',
 ```
 
-7. **Redeploy** project Vercel setelah menambah env
+8. **Redeploy** project Vercel setelah menambah env
+
+Login Google memakai **redirect penuh** (bukan popup) agar stabil di semua browser.
 
 Cek konfigurasi:
 
@@ -279,11 +284,12 @@ Ukuran maksimal: **10 MB**
 
 ## Troubleshooting
 
-### Tombol Google tidak muncul
+### Tombol Google tidak muncul / login gagal
 - Pastikan `GOOGLE_CLIENT_ID` ada di Vercel Environment Variables
 - **Redeploy** setelah menambah env
 - Cek `GET /api/v1/auth/config` → `googleEnabled: true`
-- Pastikan origin Vercel ada di Google Console
+- Pastikan **Authorized redirect URI** berisi `https://notesa-api.vercel.app/google-callback.html`
+- Pastikan **Authorized JavaScript origins** berisi domain Vercel
 
 ### CSS tidak tampil (Live Server)
 - Buka folder **`src/public/`** sebagai root Live Server

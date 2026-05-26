@@ -21,7 +21,11 @@ module.exports = {
   jwtRefreshExpiresDays: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS || '7', 10),
   databaseUrl: process.env.DATABASE_URL,
   geminiApiKey: process.env.GEMINI_API_KEY,
-  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientId: (
+    process.env.GOOGLE_CLIENT_ID ||
+    process.env.GOOGLE_OAUTH_CLIENT_ID ||
+    ''
+  ).trim() || null,
   allowedOrigins: parseAllowedOrigins(process.env.ALLOWED_ORIGINS),
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,

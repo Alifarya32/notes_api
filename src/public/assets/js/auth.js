@@ -126,17 +126,40 @@ async function handleGoogleCredential(response) {
   }
 }
 
+async function resolveGoogleClientId() {
+  let fromServer = null;
+
+  try {
+    const result = await apiRequest('/api/v1/auth/config');
+    fromServer = result.data?.googleClientId || null;
+  } catch (err) {
+    console.warn('Auth config dari server:', err.message);
+  }
+
+  const fromConfig =
+    typeof API_CONFIG !== 'undefined' && API_CONFIG.GOOGLE_CLIENT_ID
+      ? String(API_CONFIG.GOOGLE_CLIENT_ID).trim()
+      : '';
+
+  return fromServer || fromConfig || null;
+}
+
 async function initGoogleSignIn() {
   const container = document.getElementById('google-signin-btn');
   if (!container) return;
 
   try {
-    const result = await apiRequest('/api/v1/auth/config');
-    const { googleEnabled, googleClientId } = result.data || {};
+    const googleClientId = await resolveGoogleClientId();
 
-    if (!googleEnabled || !googleClientId) {
-      container.innerHTML =
-        '<p class="auth-google-hint">Login Google belum dikonfigurasi di server.</p>';
+    if (!googleClientId) {
+      container.innerHTML = `
+        <p class="auth-google-hint">
+          Tombol Google belum aktif.<br />
+          1) Buat OAuth Client ID di Google Cloud<br />
+          2) Isi <code>GOOGLE_CLIENT_ID</code> di Vercel → Settings → Environment Variables<br />
+          3) Isi juga di <code>assets/js/config.js</code><br />
+          4) Redeploy project Vercel
+        </p>`;
       return;
     }
 
@@ -158,7 +181,8 @@ async function initGoogleSignIn() {
     });
   } catch (err) {
     console.error('Google Sign-In init:', err);
-    container.innerHTML = '<p class="auth-google-hint">Gagal memuat tombol Google.</p>';
+    container.innerHTML =
+      '<p class="auth-google-hint">Gagal memuat tombol Google. Cek Authorized origins di Google Console.</p>';
   }
 }
 

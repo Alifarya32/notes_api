@@ -24,5 +24,11 @@
 
   window.API_CONFIG = {
     BASE_URL: resolveApiBaseUrl(),
+    /**
+     * Client ID dari Google Cloud Console (OAuth Web).
+     * Wajib SAMA dengan GOOGLE_CLIENT_ID di Vercel Environment Variables.
+     * Contoh: 123456789-xxxx.apps.googleusercontent.com
+     */
+    GOOGLE_CLIENT_ID: '',
   };
 })();

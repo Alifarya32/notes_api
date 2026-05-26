@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Notes — Dashboard</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <div class="dashboard-layout">
+    <aside class="sidebar">
+      <div class="sidebar__brand">
+        <div class="sidebar__logo" aria-hidden="true">AI</div>
+        <div>
+          <div class="sidebar__title">AI Notes</div>
+          <div class="sidebar__tagline">Cyber Workspace</div>
+        </div>
+      </div>
+
+      <nav class="sidebar__nav" aria-label="Navigasi utama">
+        <button type="button" class="nav-item nav-item--active" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Dashboard
+        </button>
+        <button type="button" class="nav-item" id="nav-upload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload Catatan
+        </button>
+        <button type="button" class="nav-item nav-item--logout" id="logout-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Keluar
+        </button>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="dashboard-header">
+        <div class="dashboard-header__greeting">
+          <h1>Selamat datang, <span id="user-name">User</span></h1>
+          <p>Kelola dan unggah catatan belajar Anda</p>
+        </div>
+
+        <div class="search-bar">
+          <svg class="search-bar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="search"
+            id="search-input"
+            class="search-bar__input"
+            placeholder="Cari catatan..."
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="user-badge">
+          <div class="user-badge__avatar" id="user-avatar">U</div>
+          <div>
+            <div class="user-badge__name" id="user-display-name">User</div>
+            <div class="user-badge__email" id="user-email">user@email.com</div>
+          </div>
+        </div>
+      </header>
+
+      <section class="upload-section" id="upload-section">
+        <h2>Unggah Catatan Baru</h2>
+        <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Area unggah file">
+          <svg class="dropzone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <p class="dropzone__title">Seret & lepas file di sini, atau klik untuk memilih</p>
+          <p class="dropzone__hint">Hanya menerima file .pdf, .docx, .txt (Maksimal 10MB)</p>
+          <p class="dropzone__file-name" id="selected-file-name"></p>
+          <input type="file" id="file-input" accept=".pdf,.docx,.txt,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" />
+        </div>
+        <div class="upload-progress" id="upload-progress">
+          <div class="upload-progress__bar">
+            <div class="upload-progress__fill" id="upload-progress-fill"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="notes-section">
+        <div class="notes-section__header">
+          <h2>Daftar Catatan</h2>
+          <span class="notes-count" id="notes-count">0 catatan</span>
+        </div>
+        <div class="notes-grid" id="notes-grid">
+          <div class="empty-state" id="notes-loading">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <p>Memuat catatan...</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

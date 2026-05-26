@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Notes — Masuk</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <main class="auth-page">
+    <div class="auth-card glass">
+      <div class="auth-card__brand">
+        <div class="auth-card__logo" aria-hidden="true">AI</div>
+        <h1 class="auth-card__title">AI Notes</h1>
+        <p class="auth-card__subtitle">Ultra-Modern Cyber Intelligence Platform</p>
+      </div>
+
+      <form id="login-form" class="auth-form auth-form--active" novalidate>
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input
+            type="email"
+            id="login-email"
+            class="form-input"
+            placeholder="nama@perusahaan.com"
+            autocomplete="email"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input
+            type="password"
+            id="login-password"
+            class="form-input"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary" id="login-submit">Masuk</button>
+      </form>
+
+      <form id="register-form" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="register-name">Nama Lengkap</label>
+          <input
+            type="text"
+            id="register-name"
+            class="form-input"
+            placeholder="John Doe"
+            autocomplete="name"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="register-email">Email</label>
+          <input
+            type="email"
+            id="register-email"
+            class="form-input"
+            placeholder="nama@perusahaan.com"
+            autocomplete="email"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="register-password">Password</label>
+          <input
+            type="password"
+            id="register-password"
+            class="form-input"
+            placeholder="Minimal 6 karakter"
+            autocomplete="new-password"
+            minlength="6"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary" id="register-submit">Daftar</button>
+      </form>
+
+      <p class="auth-toggle">
+        <span id="toggle-text">Belum punya akun?</span>
+        <button type="button" id="auth-toggle-btn">Daftar sekarang</button>
+      </p>
+    </div>
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/auth.js"></script>
+</body>
+</html>

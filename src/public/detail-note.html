@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Notes — Detail Catatan</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <div class="detail-page">
+    <a href="dashboard.html" class="back-link" id="back-link">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <line x1="19" y1="12" x2="5" y2="12"/>
+        <polyline points="12 19 5 12 12 5"/>
+      </svg>
+      Kembali ke Dashboard
+    </a>
+
+    <header class="detail-header">
+      <h1 id="note-title">Memuat...</h1>
+      <div class="detail-header__meta">
+        <span class="file-badge" id="note-file-type">PDF</span>
+        <span id="note-date">—</span>
+      </div>
+    </header>
+
+    <nav class="pill-tabs" role="tablist" aria-label="Konten catatan">
+      <button type="button" class="pill-tab pill-tab--active" role="tab" aria-selected="true" data-tab="summary">Ringkasan Materi</button>
+      <button type="button" class="pill-tab" role="tab" aria-selected="false" data-tab="quiz">Kuis Pilihan Ganda</button>
+      <button type="button" class="pill-tab" role="tab" aria-selected="false" data-tab="flashcards">Flashcards</button>
+    </nav>
+
+    <div id="panel-summary" class="tab-panel tab-panel--active" role="tabpanel">
+      <article class="summary-content glass" id="summary-content">
+        <div class="summary-placeholder">
+          <span class="loading-spinner" aria-hidden="true"></span>
+          <p>Memuat ringkasan AI...</p>
+        </div>
+      </article>
+    </div>
+
+    <div id="panel-quiz" class="tab-panel" role="tabpanel" hidden>
+      <div id="quiz-container">
+        <div class="generate-panel glass" id="quiz-generate-panel">
+          <p>Kuis belum dibuat. Generate kuis pilihan ganda dari materi catatan ini menggunakan AI Gemini.</p>
+          <button type="button" class="btn btn-primary" id="btn-generate-quiz">Generate Kuis AI</button>
+        </div>
+        <div id="quiz-content" style="display: none;"></div>
+      </div>
+    </div>
+
+    <div id="panel-flashcards" class="tab-panel" role="tabpanel" hidden>
+      <div id="flashcards-container">
+        <div class="generate-panel glass" id="flashcards-generate-panel">
+          <p>Flashcard belum dibuat. Generate kartu hafalan interaktif dari materi catatan ini.</p>
+          <button type="button" class="btn btn-primary" id="btn-generate-flashcards">Generate Flashcards AI</button>
+        </div>
+        <div id="flashcards-content" style="display: none;">
+          <p class="flashcard-hint">Klik kartu untuk membalik (pertanyaan ↔ jawaban)</p>
+          <div class="flashcards-grid" id="flashcards-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/detail.js"></script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 // src/app.js
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const dotenv = require('dotenv');
 
 // Import Routes
@@ -11,35 +12,50 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const PUBLIC_DIR = path.join(__dirname, 'public');
 
 // --- MIDDLEWARES ---
 app.use(cors());
 app.use(express.json());
 
-// --- ROUTES ---
+// --- API ROUTES (harus sebelum static files) ---
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/notes', notesRoutes);
 
-// Health Check Root & Global
-app.get('/', (req, res) => {
-  res.send('API Berhasil Terhubung.');
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'OK',
+    message: 'API Berhasil Terhubung',
+  });
 });
 
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    success: true,
-    status: 'OK', 
-    message: 'API Berhasil Terhubung' 
-  });
+// --- FRONTEND STATIC (HTML, CSS, JS) ---
+app.use(express.static(PUBLIC_DIR));
+
+// Halaman utama → login
+app.get('/', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
 // --- ERROR HANDLING ---
 
-// Handle 404 Not Found
 app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'Route not found' 
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({
+      success: false,
+      message: 'Route not found',
+    });
+  }
+
+  // File HTML yang diminta langsung (mis. /dashboard.html)
+  if (req.path.endsWith('.html')) {
+    return res.status(404).send('Halaman tidak ditemukan');
+  }
+
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
   });
 });
 

@@ -169,6 +169,10 @@ async function initGoogleSignIn() {
       client_id: googleClientId,
       callback: handleGoogleCredential,
       auto_select: false,
+      // Brave / browser dengan blokir pihak ketiga: nonaktifkan FedCM
+      use_fedcm_for_prompt: false,
+      itp_support: true,
+      cancel_on_tap_outside: true,
     });
 
     window.google.accounts.id.renderButton(container, {
@@ -178,12 +182,48 @@ async function initGoogleSignIn() {
       text: 'continue_with',
       locale: 'id',
       shape: 'rectangular',
+      type: 'standard',
     });
+
+    setupGoogleRedirectFallback(googleClientId);
   } catch (err) {
     console.error('Google Sign-In init:', err);
     container.innerHTML =
       '<p class="auth-google-hint">Gagal memuat tombol Google. Cek Authorized origins di Google Console.</p>';
   }
+}
+
+/** Mode redirect — lebih stabil di Brave (hindari popup blank) */
+function setupGoogleRedirectFallback(clientId) {
+  let link = document.getElementById('google-redirect-link');
+  if (!link) {
+    link = document.createElement('button');
+    link.type = 'button';
+    link.id = 'google-redirect-link';
+    link.className = 'btn btn-ghost btn-sm google-redirect-link';
+    link.textContent = 'Login Google (mode alternatif — Brave)';
+    link.addEventListener('click', () => startGoogleRedirectLogin(clientId));
+    const container = document.getElementById('google-signin-btn');
+    container?.parentElement?.appendChild(link);
+  }
+}
+
+function startGoogleRedirectLogin(clientId) {
+  const nonce =
+    Math.random().toString(36).slice(2) + Date.now().toString(36);
+  sessionStorage.setItem('google_oauth_nonce', nonce);
+
+  const redirectUri = `${window.location.origin}/google-callback.html`;
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'id_token',
+    scope: 'openid email profile',
+    nonce,
+    prompt: 'select_account',
+  });
+
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
 async function handleLogin(e) {

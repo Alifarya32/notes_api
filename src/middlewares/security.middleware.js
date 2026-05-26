@@ -16,10 +16,19 @@ function corsOptionsDelegate(req, callback) {
   }
 }
 
+const googleFrameSrc = [
+  "'self'",
+  'https://accounts.google.com',
+  'https://accounts.google.com/',
+  'https://*.google.com',
+];
+
 const connectSrcList = [
   "'self'",
   'https://accounts.google.com',
   'https://oauth2.googleapis.com',
+  'https://*.googleapis.com',
+  'https://*.gstatic.com',
   ...allowedOrigins.filter((o) => o.startsWith('http')),
 ];
 
@@ -27,15 +36,25 @@ const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
-      frameSrc: ['https://accounts.google.com'],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        'https://accounts.google.com',
+        'https://apis.google.com',
+      ],
+      frameSrc: googleFrameSrc,
+      childSrc: googleFrameSrc,
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
       connectSrc: connectSrcList,
-      imgSrc: ["'self'", 'data:', 'https:'],
-      fontSrc: ["'self'", 'data:'],
+      imgSrc: ["'self'", 'data:', 'https:', 'https://*.googleusercontent.com'],
+      fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+      formAction: ["'self'", 'https://accounts.google.com'],
     },
   },
+  // Wajib untuk popup Google Sign-In (mencegah layar putih setelah pilih akun)
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 });
 
 const authRateLimiter = rateLimit({

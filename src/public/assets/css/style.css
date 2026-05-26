@@ -125,7 +125,7 @@ a:hover {
 }
 
 /* ==========================================================================
-   AUTH PAGE
+  AUTH PAGE
    ========================================================================== */
 .auth-page {
   min-height: 100vh;
@@ -138,7 +138,7 @@ a:hover {
   width: 100%;
   max-width: 420px;
   padding: 2.5rem 2rem;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 0 48px rgba(168, 85, 247, 0.08);
+  box-shadow: 0 24px 64px rgba(1, 1, 1, 0.55),;
 }
 
 .auth-card__brand {
@@ -146,23 +146,10 @@ a:hover {
   margin-bottom: 2rem;
 }
 
-.auth-card__logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--purple-neon), var(--purple-deep));
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  box-shadow: 0 0 24px var(--purple-glow);
-}
-
 .auth-card__title {
   font-size: 1.5rem;
   font-weight: 700;
+  text-align: left;
   color: var(--text-white);
   letter-spacing: -0.02em;
 }
@@ -170,6 +157,7 @@ a:hover {
 .auth-card__subtitle {
   margin-top: 0.35rem;
   font-size: 0.9rem;
+  text-align: left;
   color: var(--text-muted);
 }
 

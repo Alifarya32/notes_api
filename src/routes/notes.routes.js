@@ -10,6 +10,8 @@ const {
 } = require('../validations/note.validation'); 
 const upload = require('../config/multer');
 
+const researchController = require('../controllers/research.controller')
+
 // Public Route
 router.get('/health-check', notesController.healthCheck);
 

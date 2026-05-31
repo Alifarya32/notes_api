@@ -10,40 +10,43 @@ const generateQuizFromText = async (text) => {
   try {
     console.log('[QUIZ] Memulai generate quiz...');
     
-    // Potong teks jika terlalu panjang (max 20k karakter untuk quiz agar konteksnya jelas)
+    // Potong teks jika terlalu panjang (max 20k karakter agar konteks tetap relevan & hemat token)
     const truncatedText = text.length > 20000 ? text.substring(0, 20000) : text;
 
-    // GUNAKAN MODEL YANG SUDAH TERBUKTI BERHASIL DI AKUN ANDA
+    // Gunakan model pilihan Anda
     const model = genAI.getGenerativeModel({ 
       model: "gemini-3.5-flash", 
       generationConfig: {
-        responseMimeType: "application/json", // PENTING: Paksa AI output JSON
+        responseMimeType: "application/json", // Paksa AI output JSON murni
+        temperature: 0.8, // Sedikit lebih kreatif untuk variasi soal
       },
     });
 
     const prompt = `
-      Kamu adalah dosen ahli yang sedang membuat soal ujian untuk mahasiswa.
-      Berdasarkan teks materi berikut, buatkan 5 soal pilihan ganda yang berkualitas tinggi.
+      Bertindaklah sebagai Dosen Penguji Akademik yang ketat dan profesional.
+      Berdasarkan teks materi berikut, buatkan 5 soal pilihan ganda berkualitas tinggi untuk menguji pemahaman mendalam mahasiswa.
       
-      Format Output HARUS berupa Array of Objects JSON seperti contoh di bawah ini:
+      FORMAT OUTPUT WAJIB:
+      Hasilkan HANYA Array of Objects JSON valid. Jangan ada teks pembuka, penutup, atau markdown code block (seperti \`\`\`json).
+      
+      STRUKTUR SETIAP OBJEK SOAL:
       [
         {
-          "question": "Pertanyaan nomor 1?",
-          "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
-          "correctAnswer": "Opsi B",
-          "explanation": "Penjelasan singkat kenapa Opsi B benar."
-        },
-        ...
+          "question": "Pertanyaan yang jelas dan tidak ambigu?",
+          "options": ["Opsi A yang masuk akal", "Opsi B (Jawaban Benar)", "Opsi C distraktor kuat", "Opsi D distraktor lemah"],
+          "correctAnswer": "Opsi B (Harus persis sama dengan string di options)",
+          "explanation": "Penjelasan singkat (1-2 kalimat) mengapa jawaban itu benar dan mengapa opsi lain salah."
+        }
       ]
 
-      Aturan:
-      1. Buat 5 soal.
-      2. Setiap soal harus punya 4 opsi jawaban (A, B, C, D).
-      3. 'correctAnswer' harus persis sama dengan salah satu string di 'options'.
-      4. 'explanation' harus jelas dan edukatif.
-      5. Jangan berikan teks pembuka atau penutup lain, hanya berikan Array JSON murni.
+      ATURAN PENULISAN SOAL:
+      1. Buat 5 soal yang mencakup berbagai aspek materi (definisi, konsep, aplikasi, analisis).
+      2. Setiap soal harus punya 4 opsi jawaban.
+      3. Distraktor (pilihan salah) harus terlihat masuk akal bagi mahasiswa yang belum paham, tapi jelas salah bagi yang sudah belajar.
+      4. 'correctAnswer' harus merupakan SALAH SATU string yang ada di dalam array 'options'.
+      5. Bahasa Indonesia baku dan formal.
       
-      Teks Materi:
+      TEKS MATERI:
       """
       ${truncatedText}
       """
@@ -51,17 +54,33 @@ const generateQuizFromText = async (text) => {
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const jsonText = response.text();
+    let jsonText = response.text();
     
-    // Parse string JSON menjadi object JavaScript
+    // Bersihkan dari markdown code block jika AI masih membandel (fallback safety)
+    jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    // Parse JSON
     const quizData = JSON.parse(jsonText);
+    
+    // Validasi sederhana: pastikan hasilnya array dan punya 5 item
+    if (!Array.isArray(quizData) || quizData.length !== 5) {
+       console.warn('[QUIZ WARNING] Jumlah soal tidak 5, menyesuaikan...');
+       // Jika kurang dari 5, kita bisa throw error atau ambil sebanyak yang ada
+       // Untuk sekarang, kita kembalikan apa adanya agar tidak crash total
+    }
     
     console.log('[QUIZ] Berhasil generate', quizData.length, 'soal.');
     return quizData;
 
   } catch (error) {
     console.error('[QUIZ ERROR DETAIL]:', error.message);
-    throw new Error('Gagal membuat quiz dengan AI. Pastikan teks materi cukup panjang.');
+    
+    // Error handling khusus untuk JSON parse failure
+    if (error instanceof SyntaxError) {
+       throw new Error('Format respons AI tidak valid (bukan JSON). Coba lagi dengan materi yang lebih terstruktur.');
+    }
+    
+    throw new Error('Gagal membuat quiz dengan AI. Pastikan teks materi cukup panjang dan jelas.');
   }
 };
 

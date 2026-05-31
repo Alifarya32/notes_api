@@ -10,8 +10,6 @@ const {
 } = require('../validations/note.validation'); 
 const upload = require('../config/multer');
 
-const researchController = require('../controllers/research.controller')
-
 // Public Route
 router.get('/health-check', notesController.healthCheck);
 
@@ -57,14 +55,6 @@ router.post(
   verifyToken, 
   validateRequest(generateContentSchema), 
   notesController.generateFlashcards
-);
-
-// Route Baru untuk Riset
-router.post(
-  '/:id/research-report', 
-  verifyToken, 
-  // validateRequest(someSchemaIfAny), 
-  researchController.generateResearchReport
 );
 
 module.exports = router;
